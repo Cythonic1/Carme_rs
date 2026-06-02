@@ -12,7 +12,7 @@ impl NewCommand {
     }
 
     pub fn create_require_directories_and_files(&self) -> &Self {
-        match fs::create_dir(&self.args.home) {
+        match fs::create_dir(&self.args.project_name) {
             Ok(_) => {
                 println!("home dir has been created");
             }
@@ -22,7 +22,7 @@ impl NewCommand {
             }
         }
 
-        let src_path = self.args.home.join("src");
+        let src_path = self.args.project_name.join("src");
         fs::create_dir(&src_path).expect("Unable to create the src directory");
 
         let mut src_file_handler =
@@ -32,24 +32,32 @@ impl NewCommand {
             .write_all(NewCommand::default_main().as_bytes())
             .expect("Unable to write the src of main.cc to it");
 
-        let mut cmake_file_handler = fs::File::create(self.args.home.join("CMakeLists.txt"))
-            .expect("Unable to create CMakeLists file");
+        let mut cmake_file_handler =
+            fs::File::create(self.args.project_name.join("CMakeLists.txt"))
+                .expect("Unable to create CMakeLists file");
         cmake_file_handler
             .write_all(
-                NewCommand::default_cmake(&self.args.project_name, &self.args.cmake_version)
-                    .as_bytes(),
+                NewCommand::default_cmake(
+                    &self.args.project_name.to_string_lossy(),
+                    &self.args.cmake_version,
+                )
+                .as_bytes(),
             )
             .expect("Unable to write cmake default content");
 
-        fs::create_dir(self.args.home.join("build")).expect("Unable to create the src directory");
-        fs::create_dir(self.args.home.join("includes"))
+        fs::create_dir(self.args.project_name.join("build"))
+            .expect("Unable to create the src directory");
+        fs::create_dir(self.args.project_name.join("includes"))
             .expect("Unable to create the src directory");
 
         self
     }
 
     pub fn init_git(&self) {
-        let command = Command::new("git").arg("init").arg(&self.args.home).spawn();
+        let command = Command::new("git")
+            .arg("init")
+            .arg(&self.args.project_name)
+            .spawn();
 
         match command {
             Ok(mut child_process) => match child_process.wait() {
